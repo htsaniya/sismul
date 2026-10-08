@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minggu 4 — Representasi Citra dan Format File</title>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.26.2/full/pyodide.js"></script>
+<style>
+:root{--merah:#C00000;--navy:#0E2841;--teal:#156082;--gold:#996600;--abu:#404040;--redup:#6B7280;
+  --terang:#F1F4F8;--garis:#D6DEE6;--mono:"SFMono-Regular",Consolas,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--abu);background:#fafbfc}
+.wrap{max-width:1050px;margin:0 auto;padding:0 22px}
+header{background:var(--navy);color:#fff;padding:20px 0}
+header h1{font-size:22px}
+header p{color:#AFC3D6;font-size:13.5px;margin-top:4px}
+main{padding:26px 0 60px}
+.kartu{background:#fff;border:1px solid var(--garis);border-radius:10px;padding:22px 24px;margin-bottom:20px}
+.kartu h2{font-size:17px;color:var(--navy);margin-bottom:4px}
+.kartu .sub{font-size:13.5px;color:var(--redup);margin-bottom:16px}
+.kendali{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;margin-bottom:14px}
+.kendali label{display:block;font-size:12px;font-weight:600;color:var(--navy);margin-bottom:5px}
+.kendali input[type=number]{width:110px;font:13.5px var(--mono);padding:7px 9px;border-radius:6px;border:1px solid var(--garis)}
+.kendali input[type=range]{width:190px;accent-color:var(--merah)}
+.kendali .nilai{font:600 13px var(--mono);color:var(--merah);margin-left:6px}
+button{font-size:13px;padding:8px 16px;border-radius:7px;border:1px solid var(--garis);background:#fff;cursor:pointer;color:var(--navy)}
+button:hover{background:var(--terang)}
+button.utama{background:var(--navy);color:#fff;border-color:var(--navy)}
+button.utama:hover{background:#16395a}
+.kanvas-kotak{text-align:center}
+.kanvas-kotak canvas{border:1px solid var(--garis);border-radius:6px;max-width:100%;background:#fff}
+.kanvas-kotak .cap{font-size:12px;color:var(--redup);margin-top:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}.grid4{grid-template-columns:1fr 1fr}}
+.metrik{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+.metrik .m{flex:1;min-width:120px;background:var(--terang);border-radius:8px;padding:10px 13px}
+.metrik .m b{display:block;font-size:19px;color:var(--navy);font-family:var(--mono)}
+.metrik .m span{font-size:10.5px;color:var(--redup)}
+.metrik .m.hijau{background:#E8F5EA}
+.metrik .m.hijau b{color:#1E6B2E}
+.metrik .m.merah{background:#FDECEC}
+.metrik .m.merah b{color:var(--merah)}
+pre{background:var(--navy);color:#D6DEE8;border-radius:8px;padding:13px 15px;overflow-x:auto;font:12px/1.5 var(--mono);margin-top:10px}
+.nota{background:#E8EDF3;border-left:4px solid var(--teal);border-radius:0 8px 8px 0;padding:12px 16px;margin-top:12px;font-size:13.5px}
+.nota.hijau{background:#E8F5EA;border-left-color:#1E6B2E}
+.nota b{color:var(--navy)}
+.drop{border:2px dashed var(--garis);border-radius:8px;padding:16px;text-align:center;cursor:pointer;font-size:13px;color:var(--redup)}
+.drop:hover,.drop.over{border-color:var(--merah);background:#FDECEC}
+.drop input{display:none}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+th{background:var(--navy);color:#fff;text-align:left;padding:6px 9px;font-size:10.5px}
+td{padding:6px 9px;border-bottom:1px solid var(--garis)}
+tr:nth-child(even) td{background:#fafbfc}
+td.num{text-align:right;font-family:var(--mono)}
+#status{position:fixed;left:0;right:0;bottom:0;background:var(--navy);color:#fff;font-size:13px;padding:9px 22px;z-index:9;transition:.3s}
+#status.siap{background:#1E6B2E}
+#status.sembunyi{transform:translateY(100%)}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <h1>Minggu 4 — Representasi Citra dan Format File</h1>
+  <p>Coba langsung di sini. Rumus dan contoh persis sama dengan slide kuliah.</p>
+</div></header>
+
+<main><div class="wrap">
+
+<div class="kartu">
+  <h2>1. Kalkulator ukuran citra mentah</h2>
+  <div class="sub">Slide 12: "Ukuran (byte) = lebar × tinggi × kedalaman bit ÷ 8". Contoh bawaan: foto kamera 12 MP, persis seperti di slide.</div>
+  <div class="kendali">
+    <div><label>Lebar (piksel)</label><input type="number" id="in-lebar" value="4000"></div>
+    <div><label>Tinggi (piksel)</label><input type="number" id="in-tinggi" value="3000"></div>
+    <div><label>Kedalaman bit</label><input type="number" id="in-bit" value="24"></div>
+    <div><label>Rasio kompresi JPEG</label><input type="number" id="in-rasio" value="12"></div>
+    <button class="utama" onclick="hitungUkuran()">Hitung</button>
+  </div>
+  <div class="grid4" id="hasil-ukuran"></div>
+  <div class="nota" id="nota-ukuran"></div>
+</div>
+
+<div class="kartu">
+  <h2>2. Kedalaman bit — buktikan klaim slide 10</h2>
+  <div class="sub">"1 bit → citra biner, 8 bit → 256 aras keabuan, 24 bit → true color ≈16,7 juta warna." Geser dan lihat sendiri.</div>
+  <div class="drop" id="drop">Klik atau seret foto ke sini &nbsp;·&nbsp; atau <button id="btn-contoh" style="margin-left:6px">pakai contoh</button>
+    <input type="file" id="file" accept="image/*"></div>
+  <div class="kendali" style="margin-top:14px">
+    <label>Kedalaman bit <span class="nilai" id="v-bit">24 bit</span></label>
+    <input type="range" id="bit-slider" min="1" max="24" value="24">
+  </div>
+  <div class="kanvas-kotak"><canvas id="c-citra"></canvas><div class="cap" id="cap-citra"></div></div>
+  <div class="metrik">
+    <div class="m hijau"><b id="m-tingkat">—</b><span>JUMLAH TINGKAT WARNA</span></div>
+  </div>
+  <div class="nota" id="nota-bit"></div>
+</div>
+
+<div class="kartu">
+  <h2>3. Bandingkan format berkas — foto sungguhan Anda</h2>
+  <div class="sub">Slide 14: "foto → JPEG/WebP • grafik/teks/transparansi → PNG • arsip → TIFF". Buktikan dengan foto yang sama.</div>
+  <table id="tabel-format"><thead><tr><th>Format</th><th class="num">Ukuran</th><th class="num">Rasio</th></tr></thead><tbody></tbody></table>
+  <div class="nota" id="nota-format"></div>
+</div>
+
+<div class="kartu">
+  <h2>4. Kodenya, buat yang ingin tahu</h2>
+  <pre>def ukuran_mentah(lebar, tinggi, bit):        # persis slide 12
+    return lebar * tinggi * bit // 8
+
+def kedalaman_bit(citra, n_bit):               # persis slide 10
+    tingkat = 2 ** n_bit
+    langkah = 256 // tingkat
+    return (citra // langkah) * langkah</pre>
+</div>
+
+</div></main>
+
+<script>
+let pyReady=null, W=0, H=0, srcGray=null;
+function status(t,ok){let e=document.getElementById("status");if(!e){e=document.createElement("div");e.id="status";document.body.appendChild(e);}e.textContent=t;e.className=ok?"siap":"";if(ok)setTimeout(()=>e.classList.add("sembunyi"),1400);}
+
+function hitungUkuran(){
+  const w=+document.getElementById("in-lebar").value, h=+document.getElementById("in-tinggi").value;
+  const bit=+document.getElementById("in-bit").value, rasio=+document.getElementById("in-rasio").value;
+  const piksel = w*h;
+  const mentah = piksel*bit/8;
+  const jpeg = mentah/rasio;
+  const buang = (1-1/rasio)*100;
+  document.getElementById("hasil-ukuran").innerHTML = `
+    <div class="m"><b>${(piksel/1e6).toFixed(1)} MP</b><span>JUMLAH PIKSEL</span></div>
+    <div class="m merah"><b>${(mentah/1e6).toFixed(1)} MB</b><span>DATA MENTAH</span></div>
+    <div class="m hijau"><b>${(jpeg/1e6).toFixed(2)} MB</b><span>SETELAH JPEG</span></div>
+    <div class="m hijau"><b>${buang.toFixed(0)}%</b><span>DATA DIBUANG</span></div>`;
+  document.getElementById("nota-ukuran").innerHTML =
+    (w===4000&&h===3000&&bit===24)
+    ? `Ini persis angka di slide 12 — 12 juta piksel, 36 MB mentah, jadi ~3 MB setelah JPEG. Coba ubah angkanya untuk kasus lain.`
+    : `Bandingkan: kamera 12MP (4000×3000, 24-bit) di slide menghasilkan 36 MB mentah, ~3 MB setelah JPEG (92% dibuang).`;
+}
+
+const KODE = `
+import numpy as np
+def kedalaman_bit_img(a, n_bit):
+    if n_bit >= 8: return a.copy()
+    tingkat = 2**n_bit
+    langkah = 256 // tingkat
+    q = (a.astype(np.int32)//langkah)*langkah + langkah//2
+    return np.clip(q,0,255).astype(np.uint8)
+
+def citra_contoh(n=240):
+    y,x = np.mgrid[0:n,0:n]
+    a = 128+70*np.sin(x*0.06)*np.cos(y*0.05)+40*np.sin((x+y)*0.04)
+    return np.clip(a,0,255).astype(np.uint8)
+`;
+
+async function boot(){
+  status("Memuat… (sekali saja, tunggu sebentar)");
+  const p = await loadPyodide();
+  await p.loadPackage("numpy");
+  p.runPython(KODE);
+  status("Siap dicoba.", true);
+  hitungUkuran();
+  return p;
+}
+pyReady = boot();
+function run(k){const h=window._py.runPython(k); if(h&&h.toJs){const j=h.toJs({dict_converter:Object.fromEntries});h.destroy();return j;} return h;}
+function gambarGray(cv,data,w,h,skala){
+  cv.width=w*skala; cv.height=h*skala;
+  const ctx=cv.getContext("2d");
+  const tmp=document.createElement("canvas"); tmp.width=w; tmp.height=h;
+  const id=tmp.getContext("2d").createImageData(w,h);
+  for(let i=0;i<w*h;i++){id.data[i*4]=id.data[i*4+1]=id.data[i*4+2]=data[i]; id.data[i*4+3]=255;}
+  tmp.getContext("2d").putImageData(id,0,0);
+  ctx.imageSmoothingEnabled=false; ctx.drawImage(tmp,0,0,cv.width,cv.height);
+}
+
+async function muat(){
+  await pyReady; window._py = window._py||await pyReady;
+  const r=run(`a=citra_contoh(); globals()["SRC"]=a; {"d":a.ravel().tolist(),"w":int(a.shape[1]),"h":int(a.shape[0])}`);
+  W=r.w; H=r.h; srcGray=Uint8Array.from(r.d);
+  perbaruiBit();
+}
+function perbaruiBit(){
+  if(!srcGray) return;
+  const bit = +document.getElementById("bit-slider").value;
+  document.getElementById("v-bit").textContent = bit + " bit";
+  window._py.globals.set("nb", bit);
+  const r = run(`
+q = kedalaman_bit_img(SRC, nb)
+{"d": q.ravel().tolist(), "tingkat": 2**nb}`);
+  gambarGray(document.getElementById("c-citra"), Uint8Array.from(r.d), W, H, Math.min(2, 320/W));
+  document.getElementById("cap-citra").textContent = `${bit} bit`;
+  document.getElementById("m-tingkat").textContent = r.tingkat.toLocaleString('id-ID');
+  const n = document.getElementById("nota-bit");
+  if(bit===1) n.innerHTML = `<b>1 bit = citra biner</b> — cuma 2 tingkat, hitam atau putih. Sesuai klaim slide 10.`;
+  else if(bit===8) n.innerHTML = `<b>8 bit = 256 aras keabuan</b> — persis klaim slide 10.`;
+  else if(bit>=24) n.innerHTML = `<b>24 bit = true color</b> — 16.777.216 kombinasi warna (di sini ditampilkan grayscale untuk kesederhanaan, prinsipnya sama).`;
+  else n.innerHTML = `Geser ke 1, 8, dan 24 untuk melihat tiga titik yang disebut slide 10.`;
+}
+
+async function bandingkanFormat(canvas){
+  document.getElementById("nota-format").innerHTML = "Memproses...";
+  const toBlob=(tipe,q)=>new Promise(res=>canvas.toBlob(b=>res(b),tipe,q));
+  const daftar = [
+    {nama:"PNG", blob: await toBlob("image/png")},
+    {nama:"JPEG 90%", blob: await toBlob("image/jpeg",0.9)},
+    {nama:"JPEG 50%", blob: await toBlob("image/jpeg",0.5)},
+  ];
+  const terbesar = Math.max(...daftar.map(d=>d.blob.size));
+  document.querySelector("#tabel-format tbody").innerHTML = daftar.map(d=>
+    `<tr><td>${d.nama}</td><td class="num">${(d.blob.size/1024).toFixed(1)} KB</td><td class="num">${(terbesar/d.blob.size).toFixed(2)}×</td></tr>`
+  ).join("");
+  document.getElementById("nota-format").innerHTML =
+    `<b>Foto ini bukan teks/grafik dengan tepi tajam</b> — PNG (lossless) hasilnya jauh lebih besar dari JPEG. Sesuai aturan slide 14: PNG lebih cocok untuk grafik/teks, JPEG untuk foto.`;
+}
+
+document.getElementById("bit-slider").oninput = perbaruiBit;
+document.getElementById("btn-contoh").onclick = muat;
+
+function bacaGambar(file, maks=240){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height; const s=Math.min(1,maks/Math.max(w,h));
+      w=Math.round(w*s); h=Math.round(h*s);
+      const c=document.createElement("canvas"); c.width=w;c.height=h;
+      const ctx=c.getContext("2d"); ctx.drawImage(img,0,0,w,h);
+      const d=ctx.getImageData(0,0,w,h).data;
+      const out=new Uint8Array(w*h);
+      for(let i=0;i<w*h;i++) out[i]=Math.round(0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2]);
+      res({data:out,w,h,canvasWarna:c});
+    };
+    img.onerror=rej; img.src=URL.createObjectURL(file);
+  });
+}
+async function pakaiUpload(g){
+  await pyReady; window._py=window._py||await pyReady;
+  W=g.w; H=g.h; srcGray=g.data;
+  window._py.globals.set("_buf",Array.from(g.data)); window._py.globals.set("_w",g.w); window._py.globals.set("_h",g.h);
+  run(`import numpy as np; globals()["SRC"]=np.array(_buf,np.uint8).reshape(_h,_w)`);
+  perbaruiBit();
+  bandingkanFormat(g.canvasWarna);
+}
+const drop=document.getElementById("drop"), fin=document.getElementById("file");
+drop.onclick=(e)=>{ if(e.target.tagName!=="BUTTON") fin.click(); };
+["dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop", async e=>{ const f=e.dataTransfer.files[0]; if(f) pakaiUpload(await bacaGambar(f)); });
+fin.onchange=async()=>{ const f=fin.files[0]; if(f) pakaiUpload(await bacaGambar(f)); };
+
+muat();
+</script>
+</body>
+</html>
